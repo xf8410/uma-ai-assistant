@@ -33,21 +33,23 @@ jobs:
           /tmp/gradle-8.2/bin/gradle --version
 
       - name: Build Debug APK
+        id: build_apk
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           export GRADLE_USER_HOME=/tmp/gradle-home
           mkdir -p $GRADLE_USER_HOME
-          /tmp/gradle-8.2/bin/gradle assembleDebug --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME
+          set -o pipefail
+          /tmp/gradle-8.2/bin/gradle clean assembleDebug --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME > /tmp/build.log 2>&1
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
-      - name: Find APK
+      - name: Print build log (always)
+        if: always()
         run: |
-          echo "=== All APK files ==="
-          find app/build/outputs -name "*.apk" -type f 2>/dev/null | head -20
-          echo "=== APK dir ==="
-          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "No debug dir"
+          echo "========== BUILD LOG =========="
+          cat /tmp/build.log || echo "No build log"
+          echo "========== END LOG =========="
 
       - name: Upload APK
         if: success()
