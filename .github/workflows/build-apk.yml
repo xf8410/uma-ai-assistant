@@ -35,26 +35,30 @@ jobs:
       - name: Build Debug APK
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
-          gradle assembleDebug --stacktrace --no-daemon --offline=false 2>&1 | tee build.log
+          gradle assembleDebug --stacktrace --no-daemon 2>&1 | tee build.log
           echo "=== BUILD EXIT CODE: ${PIPESTATUS[0]} ==="
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
-      - name: List outputs
+      - name: Find and copy APK
         if: always()
         run: |
-          echo "=== APK Output ==="
-          find app/build/outputs -name "*.apk" -type f 2>/dev/null || echo "No APK found"
-          echo "=== Build dir ==="
-          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "No output dir"
-          echo "=== Last 50 lines of build log ==="
-          tail -n 50 build.log 2>/dev/null || echo "No log"
+          echo "=== Searching for APK files ==="
+          find . -name "*.apk" -type f 2>/dev/null | head -20
+          echo "=== Build outputs ==="
+          ls -la app/build/outputs/ 2>/dev/null || echo "No outputs dir"
+          ls -la app/build/outputs/apk/ 2>/dev/null || echo "No apk dir"
+          # Copy any found APK to known location
+          mkdir -p app/build/outputs/apk/debug/
+          find . -name "*.apk" -type f -exec cp {} app/build/outputs/apk/debug/app-debug.apk \; 2>/dev/null || true
+          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "No debug dir"
 
       - name: Upload APK
-        if: success()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: uma-ai-assistant-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
+          if-no-files-found: warn
