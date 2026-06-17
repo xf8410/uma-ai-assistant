@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="400dp"
+    android:layout_height="580dp">
+
+    <!-- 展开状态：URA风格仪表盘 -->
+    <LinearLayout
+        android:id="@+id/layoutExpanded"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#000000"
+        android:padding="8dp">
+
+        <!-- 标题栏 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingBottom="6dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="UmaAI"
+                android:textColor="#FF69B4"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:fontFamily="monospace" />
+
+            <ImageButton
+                android:id="@+id/btnCamera"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_camera"
+                android:tint="#00FFFF"
+                android:contentDescription="截图OCR" />
+
+            <ImageButton
+                android:id="@+id/btnMinimize"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/arrow_down_float"
+                android:tint="#FF69B4"
+                android:contentDescription="最小化" />
+
+            <ImageButton
+                android:id="@+id/btnClose"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="#FF4444"
+                android:contentDescription="关闭" />
+        </LinearLayout>
+
+        <!-- 状态栏 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingBottom="4dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#1a1a2e"
+                android:padding="4dp"
+                android:layout_marginEnd="4dp">
+                <TextView android:text="体力" android:textSize="8sp" android:textColor="#AAAAAA" />
+                <TextView android:id="@+id/tvVital" android:text="100/100" android:textSize="14sp" android:textColor="#FFFF00" android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#1a1a2e"
+                android:padding="4dp"
+                android:layout_marginEnd="4dp">
+                <TextView android:text="心情" android:textSize="8sp" android:textColor="#AAAAAA" />
+                <TextView android:id="@+id/tvMotivation" android:text="普通" android:textSize="14sp" android:textColor="#AAAAAA" android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#1a1a2e"
+                android:padding="4dp">
+                <TextView android:id="@+id/tvTurn" android:text="T1/72" android:textSize="8sp" android:textColor="#00FFFF" />
+                <TextView android:id="@+id/tvTotal" android:text="总: 0 | Pt: 0" android:textSize="10sp" android:textColor="#FF69B4" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 状态提示 -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="10sp"
+            android:textColor="#FF4444"
+            android:paddingBottom="4dp" />
+
+        <!-- 五列训练卡片 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="6dp">
+
+            <!-- 速度 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#1a0505"
+                android:padding="6dp"
+                android:layout_marginEnd="3dp"
+                android:gravity="center">
+                <TextView android:text="速" android:textSize="10sp" android:textColor="#FF4444" android:textStyle="bold" />
+                <TextView android:id="@+id/tvSpeed" android:text="0" android:textSize="18sp" android:textColor="#FF4444" android:textStyle="bold" />
+                <Button android:id="@+id/btnSpeed" android:layout_width="40dp" android:layout_height="32dp" android:text="训" android:textSize="10sp" android:background="#FF4444" android:textColor="#FFFFFF" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/btnSpeedMinus" android:layout_width="24dp" android:layout_height="28dp" android:text="-" android:textSize="10sp" android:background="#2a1a1a" android:textColor="#FF4444" android:padding="0dp" />
+                    <Button android:id="@+id/btnSpeedPlus" android:layout_width="24dp" android:layout_height="28dp" android:text="+" android:textSize="10sp" android:background="#2a1a1a" android:textColor="#FF4444" android:padding="0dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 耐力 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#1a1a05"
+                android:padding="6dp"
+                android:layout_marginEnd="3dp"
+                android:gravity="center">
+                <TextView android:text="耐" android:textSize="10sp" android:textColor="#FFCC00" android:textStyle="bold" />
+                <TextView android:id="@+id/tvStamina" android:text="0" android:textSize="18sp" android:textColor="#FFCC00" android:textStyle="bold" />
+                <Button android:id="@+id/btnStamina" android:layout_width="40dp" android:layout_height="32dp" android:text="训" android:textSize="10sp" android:background="#FFCC00" android:textColor="#000000" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/btnStaminaMinus" android:layout_width="24dp" android:layout_height="28dp" android:text="-" android:textSize="10sp" android:background="#1a1a1a" android:textColor="#FFCC00" android:padding="0dp" />
+                    <Button android:id="@+id/btnStaminaPlus" android:layout_width="24dp" android:layout_height="28dp" android:text="+" android:textSize="10sp" android:background="#1a1a1a" android:textColor="#FFCC00" android:padding="0dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 力量 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#1a1005"
+                android:padding="6dp"
+                android:layout_marginEnd="3dp"
+                android:gravity="center">
+                <TextView android:text="力" android:textSize="10sp" android:textColor="#FF8844" android:textStyle="bold" />
+                <TextView android:id="@+id/tvPower" android:text="0" android:textSize="18sp" android:textColor="#FF8844" android:textStyle="bold" />
+                <Button android:id="@+id/btnPower" android:layout_width="40dp" android:layout_height="32dp" android:text="训" android:textSize="10sp" android:background="#FF8844" android:textColor="#FFFFFF" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/btnPowerMinus" android:layout_width="24dp" android:layout_height="28dp" android:text="-" android:textSize="10sp" android:background="#1a1a1a" android:textColor="#FF8844" android:padding="0dp" />
+                    <Button android:id="@+id/btnPowerPlus" android:layout_width="24dp" android:layout_height="28dp" android:text="+" android:textSize="10sp" android:background="#1a1a1a" android:textColor="#FF8844" android:padding="0dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 根性 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#10051a"
+                android:padding="6dp"
+                android:layout_marginEnd="3dp"
+                android:gravity="center">
+                <TextView android:text="根" android:textSize="10sp" android:textColor="#CC44FF" android:textStyle="bold" />
+                <TextView android:id="@+id/tvGuts" android:text="0" android:textSize="18sp" android:textColor="#CC44FF" android:textStyle="bold" />
+                <Button android:id="@+id/btnGuts" android:layout_width="40dp" android:layout_height="32dp" android:text="训" android:textSize="10sp" android:background="#CC44FF" android:textColor="#FFFFFF" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/btnGutsMinus" android:layout_width="24dp" android:layout_height="28dp" android:text="-" android:textSize="10sp" android:background="#1a1a1a" android:textColor="#CC44FF" android:padding="0dp" />
+                    <Button android:id="@+id/btnGutsPlus" android:layout_width="24dp" android:layout_height="28dp" android:text="+" android:textSize="10sp" android:background="#1a1a1a" android:textColor="#CC44FF" android:padding="0dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 智力 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="#05101a"
+                android:padding="6dp"
+                android:gravity="center">
+                <TextView android:text="智" android:textSize="10sp" android:textColor="#4488FF" android:textStyle="bold" />
+                <TextView android:id="@+id/tvWit" android:text="0" android:textSize="18sp" android:textColor="#4488FF" android:textStyle="bold" />
+                <Button android:id="@+id/btnWit" android:layout_width="40dp" android:layout_height="32dp" android:text="训" android:textSize="10sp" android:background="#4488FF" android:textColor="#FFFFFF" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <Button android:id="@+id/btnWitMinus" android:layout_width="24dp" android:layout_height="28dp" android:text="-" android:textSize="10sp" android:background="#1a1a1a" android:textColor="#4488FF" android:padding="0dp" />
+                    <Button android:id="@+id/btnWitPlus" android:layout_width="24dp" android:layout_height="28dp" android:text="+" android:textSize="10sp" android:background="#1a1a1a" android:textColor="#4488FF" android:padding="0dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 其他动作按钮 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="6dp">
+
+            <Button
+                android:id="@+id/btnRest"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:text="休息 +50体"
+                android:textSize="10sp"
+                android:background="#1a2a1a"
+                android:textColor="#44FF88"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnOuting"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:text="外出 +心情"
+                android:textSize="10sp"
+                android:background="#1a1a2a"
+                android:textColor="#FF69B4"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnRace"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:text="比赛 +35pt"
+                android:textSize="10sp"
+                android:background="#1a1a05"
+                android:textColor="#FFDD44"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/btnClinic"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:text="保健室"
+                android:textSize="10sp"
+                android:background="#1a0505"
+                android:textColor="#FF4444" />
+        </LinearLayout>
+
+        <!-- AI建议 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:background="#1a1a1a"
+            android:padding="6dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="决策建议"
+                android:textSize="10sp"
+                android:textColor="#00FFFF"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvAdvice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="开始训练..."
+                android:textSize="11sp"
+                android:textColor="#44FF88"
+                android:lineSpacingMultiplier="1.3" />
+        </LinearLayout>
+
+        <!-- 底部提示 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="点击 📷 截图OCR | 彩色卡片=训练 | 拖动移动"
+            android:textSize="8sp"
+            android:textColor="#555555"
+            android:gravity="center"
+            android:paddingTop="4dp" />
+    </LinearLayout>
+
+    <!-- 折叠状态 -->
+    <FrameLayout
+        android:id="@+id/layoutCollapsed"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:visibility="gone">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/circle_pink" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="AI"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+
+</FrameLayout>

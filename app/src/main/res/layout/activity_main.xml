@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#1a1a2e">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="赛马娘AI助手"
+        android:textColor="#FF69B4"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="无障碍截图OCR + AI决策悬浮窗"
+        android:textColor="#AAAAAA"
+        android:textSize="12sp"
+        android:layout_marginBottom="16dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAccessibility"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="1. 开启无障碍服务"
+        android:textColor="#FFFFFF"
+        app:backgroundTint="#FF69B4"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="2. 开启悬浮窗权限"
+        android:textColor="#FFFFFF"
+        app:backgroundTint="#9C27B0"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnScreenshot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="3. 授权屏幕录制（OCR）"
+        android:textColor="#FFFFFF"
+        app:backgroundTint="#4CAF50"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnStart"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="4. 启动AI助手"
+        android:textColor="#FFFFFF"
+        app:backgroundTint="#2196F3"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnStop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="停止"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:textColor="#FF4444"
+        app:strokeColor="#FF4444"
+        android:layout_marginBottom="16dp" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#CCCCCC"
+        android:textSize="12sp"
+        android:lineSpacingMultiplier="1.3"
+        android:background="#2a1a3e"
+        android:padding="12dp"
+        android:minHeight="200dp" />
+
+</LinearLayout>

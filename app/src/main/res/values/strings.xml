@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">赛马娘AI助手</string>
+    <string name="accessibility_desc">检测赛马娘游戏运行状态，自动截图OCR识别数值并给出AI训练建议。只读屏不操控游戏。</string>
+</resources>

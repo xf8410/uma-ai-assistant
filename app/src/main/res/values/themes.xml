@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.UmaAi" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">#FF69B4</item>
+        <item name="colorPrimaryDark">#2a1a3e</item>
+        <item name="colorAccent">#FF69B4</item>
+        <item name="android:windowBackground">#1a1a2e</item>
+        <item name="android:statusBarColor">#2a1a3e</item>
+        <item name="android:navigationBarColor">#1a1a2e</item>
+    </style>
+</resources>
