@@ -28,16 +28,21 @@ import androidx.core.app.NotificationCompat
 import com.umaai.assistant.MainActivity
 import com.umaai.assistant.R
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import kotlinx.coroutines.*
-import java.nio.ByteBuffer
+import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.roundToInt
 
 /**
- * 屏幕截图服务
- * 负责截取赛马娘游戏画面，并进行OCR识别
+ * 屏幕截图 + OCR 识别服务
+ * 
+ * 流程：
+ * 1. 截取游戏画面
+ * 2. 临时保存到缓存文件（OCR用）
+ * 3. ML Kit OCR识别五维+回合数
+ * 4. 发送广播通知悬浮窗更新
+ * 5. 立即删除截图文件（不存缓存）
  */
 class ScreenshotService : Service() {
 
@@ -49,12 +54,13 @@ class ScreenshotService : Service() {
     private var density = 320
 
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         private const val EXTRA_RESULT_CODE = "result_code"
         private const val EXTRA_RESULT_DATA = "result_data"
-        private const val ACTION_CAPTURE = "com.umaai.CAPTURE"
+        const val ACTION_CAPTURE = "com.umaai.CAPTURE"
+        // 截图缓存目录（OCR后立即清理）
+        const val SCREENSHOT_DIR = "uma_screenshots"
 
         fun start(context: Context, resultCode: Int, resultData: Intent) {
             val intent = Intent(context, ScreenshotService::class.java).apply {
@@ -64,6 +70,7 @@ class ScreenshotService : Service() {
             context.startService(intent)
         }
 
+        /** 触发截图（从AccessibilityService调用） */
         fun triggerCapture(context: Context) {
             context.sendBroadcast(Intent(ACTION_CAPTURE))
         }
@@ -81,8 +88,15 @@ class ScreenshotService : Service() {
         super.onCreate()
         createNotificationChannel()
         startForeground(2, createNotification())
-        registerReceiver(captureReceiver, IntentFilter(ACTION_CAPTURE),
-            Context.RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(captureReceiver, IntentFilter(ACTION_CAPTURE),
+                Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(captureReceiver, IntentFilter(ACTION_CAPTURE))
+        }
+        
+        // 启动时清理旧截图
+        clearScreenshotCache()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -110,7 +124,10 @@ class ScreenshotService : Service() {
     }
 
     private fun captureAndAnalyze() {
-        if (mediaProjection == null) return
+        if (mediaProjection == null) {
+            sendOcrError("屏幕录制未授权")
+            return
+        }
 
         val scale = 0.5f
         val w = (displayWidth * scale).roundToInt()
@@ -124,23 +141,39 @@ class ScreenshotService : Service() {
             imageReader?.surface, null, null
         )
 
+        // 延迟等待渲染
         Handler(Looper.getMainLooper()).postDelayed({
             processImage(w, h)
-        }, 300)
+        }, 400)
     }
 
     private fun processImage(w: Int, h: Int) {
-        val image = imageReader?.acquireLatestImage() ?: return
+        val image = imageReader?.acquireLatestImage()
+        if (image == null) {
+            sendOcrError("截图失败")
+            cleanup()
+            return
+        }
 
         try {
             val bitmap = imageToBitmap(image, w, h)
             if (bitmap != null) {
-                performOcr(bitmap)
+                // 临时保存到缓存（OCR需要文件路径）
+                val tempFile = saveTempScreenshot(bitmap)
+                if (tempFile != null) {
+                    performOcr(tempFile, bitmap)
+                    // OCR完成后立即删除
+                    tempFile.delete()
+                } else {
+                    // 直接从bitmap OCR
+                    performOcrFromBitmap(bitmap)
+                }
+            } else {
+                sendOcrError("图像处理失败")
             }
         } finally {
             image.close()
-            virtualDisplay?.release()
-            imageReader?.close()
+            cleanup()
         }
     }
 
@@ -159,139 +192,222 @@ class ScreenshotService : Service() {
         return bitmap
     }
 
-    private fun performOcr(bitmap: Bitmap) {
-        val inputImage = InputImage.fromBitmap(bitmap, 0)
-
-        recognizer.process(inputImage)
-            .addOnSuccessListener { text ->
-                val stats = parseGameStats(text)
-                if (stats.isValid()) {
-                    // 通知悬浮窗更新建议
-                    val intent = Intent("com.umaai.AI_ADVICE").apply {
-                        putExtra("speed", stats.speed)
-                        putExtra("stamina", stats.stamina)
-                        putExtra("power", stats.power)
-                        putExtra("guts", stats.guts)
-                        putExtra("wit", stats.wit)
-                        putExtra("vital", stats.vital)
-                        putExtra("motivation", stats.motivation)
-                        putExtra("turn", stats.turn)
-                        putExtra("skillPt", stats.skillPt)
-                        putExtra("isFat", stats.isFat)
-                    }
-                    sendBroadcast(intent)
-                }
+    /**
+     * 临时保存截图到缓存目录（OCR后立即删除）
+     */
+    private fun saveTempScreenshot(bitmap: Bitmap): File? {
+        return try {
+            val dir = File(cacheDir, SCREENSHOT_DIR)
+            dir.mkdirs()
+            val file = File(dir, "temp_${System.currentTimeMillis()}.png")
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
             }
-            .addOnFailureListener { /* OCR失败静默 */ }
+            file
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
-     * 解析赛马娘游戏画面中的数值
+     * 从缓存文件OCR（然后删除文件）
      */
-    private fun parseGameStats(text: Text): GameStats {
-        val result = GameStats()
-        val allText = text.text
+    private fun performOcr(tempFile: File, bitmap: Bitmap) {
+        val inputImage = InputImage.fromBitmap(bitmap, 0)
+        
+        recognizer.process(inputImage)
+            .addOnSuccessListener { text ->
+                // 立即删除临时文件
+                tempFile.delete()
+                clearScreenshotCache()
+                
+                val result = parseGameScreen(text)
+                sendOcrResult(result)
+            }
+            .addOnFailureListener { e ->
+                tempFile.delete()
+                sendOcrError("OCR失败: ${e.message}")
+            }
+    }
 
+    /**
+     * 直接从Bitmap OCR（无文件）
+     */
+    private fun performOcrFromBitmap(bitmap: Bitmap) {
+        val inputImage = InputImage.fromBitmap(bitmap, 0)
+        
+        recognizer.process(inputImage)
+            .addOnSuccessListener { text ->
+                clearScreenshotCache()
+                val result = parseGameScreen(text)
+                sendOcrResult(result)
+            }
+            .addOnFailureListener { e ->
+                sendOcrError("OCR失败: ${e.message}")
+            }
+    }
+
+    /**
+     * 解析赛马娘游戏画面
+     * 参考PC端工具的显示格式，提取：
+     * - 回合数（TURN/ターン）
+     * - 五维属性
+     * - 体力
+     * - 技能点
+     */
+    data class OcrResult(
+        val turn: Int = 0,
+        val speed: Int = 0,
+        val stamina: Int = 0,
+        val power: Int = 0,
+        val guts: Int = 0,
+        val wit: Int = 0,
+        val vital: Int = 0,
+        val skillPt: Int = 0,
+        val motivation: Int = 3,
+        val isFat: Boolean = false,
+        val rawConfidence: Float = 0f
+    )
+
+    private fun parseGameScreen(text: com.google.mlkit.vision.text.Text): OcrResult {
+        val result = OcrResult()
+        val allText = text.text
+        
+        // 1. 识别回合数（左上角通常显示 TURN 10 或 ターン 10）
+        val turnPattern1 = Regex("TURN\\s*(\\d+)", RegexOption.IGNORE_CASE)
+        val turnPattern2 = Regex("ターン\\s*(\\d+)")
+        val turnPattern3 = Regex("回合\\s*(\\d+)")
+        val turnPattern4 = Regex("(\\d+)\\s*/\\s*78")  // 10/78格式
+        
+        val turnMatch = turnPattern1.find(allText) 
+            ?: turnPattern2.find(allText)
+            ?: turnPattern3.find(allText)
+            ?: turnPattern4.find(allText)
+        
+        val turn = turnMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        
+        // 2. 识别五维属性
+        var speed = 0; var stamina = 0; var power = 0; var guts = 0; var wit = 0
+        var vital = 0; var skillPt = 0
+        var foundStats = 0
+        
         for (block in text.textBlocks) {
             for (line in block.lines) {
                 val txt = line.text.trim()
-                val num = Regex("\\d+").find(txt)?.value?.toIntOrNull()
-
-                when {
-                    // 速度
-                    (txt.contains("スピード") || txt.contains("速度") || txt.contains("Speed")) && num != null -> {
-                        if (num in 50..2100) result.speed = num
-                    }
-                    // 耐力
-                    (txt.contains("スタミナ") || txt.contains("耐力") || txt.contains("Stamina")) && num != null -> {
-                        if (num in 50..2100) result.stamina = num
-                    }
-                    // 力量
-                    (txt.contains("パワー") || txt.contains("力量") || txt.contains("Power")) && num != null -> {
-                        if (num in 50..2100) result.power = num
-                    }
-                    // 根性
-                    (txt.contains("根性") || txt.contains("Guts")) && num != null -> {
-                        if (num in 50..2100) result.guts = num
-                    }
-                    // 智力
-                    (txt.contains("賢さ") || txt.contains("智力") || txt.contains("Wiz") || txt.contains("Int")) && num != null -> {
-                        if (num in 50..2100) result.wit = num
-                    }
-                    // 体力（0-100范围）
-                    (txt.contains("体力") || txt.contains("やる気") || txt.contains("HP")) && num != null -> {
-                        if (num in 0..100) result.vital = num
-                    }
-                    // 技能点（通常较大）
-                    (txt.contains("スキル") || txt.contains("技能") || txt.contains("Pt")) && num != null -> {
-                        if (num > 100) result.skillPt = num
-                    }
-                    // 回合数
-                    (txt.contains("TURN") || txt.contains("Turn") || txt.contains("ターン") || txt.contains("回合")) && num != null -> {
-                        if (num in 1..79) result.turn = num
-                    }
-                    // 吃胖检测
-                    txt.contains("太った") || txt.contains("食べ過ぎ") || txt.contains("体重") -> {
-                        result.isFat = true
-                    }
+                val nums = Regex("\\d+").findAll(txt).map { it.value.toIntOrNull() ?: 0 }.toList()
+                
+                // 速度
+                if ((txt.contains("速度") || txt.contains("スピード") || txt.contains("Speed")) && nums.isNotEmpty()) {
+                    if (nums[0] in 50..2100) { speed = nums[0]; foundStats++ }
+                }
+                // 耐力
+                else if ((txt.contains("耐力") || txt.contains("スタミナ") || txt.contains("Stamina")) && nums.isNotEmpty()) {
+                    if (nums[0] in 50..2100) { stamina = nums[0]; foundStats++ }
+                }
+                // 力量
+                else if ((txt.contains("力量") || txt.contains("パワー") || txt.contains("Power")) && nums.isNotEmpty()) {
+                    if (nums[0] in 50..2100) { power = nums[0]; foundStats++ }
+                }
+                // 根性
+                else if ((txt.contains("根性") || txt.contains("Guts")) && nums.isNotEmpty()) {
+                    if (nums[0] in 50..2100) { guts = nums[0]; foundStats++ }
+                }
+                // 智力
+                else if ((txt.contains("智力") || txt.contains("賢さ") || txt.contains("Wiz") || txt.contains("Int")) && nums.isNotEmpty()) {
+                    if (nums[0] in 50..2100) { wit = nums[0]; foundStats++ }
+                }
+                // 体力（0-100范围）
+                else if ((txt.contains("体力") || txt.contains("やる気") || txt.contains("HP")) && nums.isNotEmpty()) {
+                    if (nums[0] in 0..100) vital = nums[0]
+                }
+                // 技能点
+                else if ((txt.contains("スキル") || txt.contains("技能") || txt.contains("Pt")) && nums.isNotEmpty()) {
+                    if (nums[0] > 100) skillPt = nums[0]
+                }
+                // 吃胖检测
+                else if (txt.contains("太った") || txt.contains("食べ過ぎ") || txt.contains("体重")) {
+                    // isFat = true
                 }
             }
         }
-
-        // 从所有数字推断（备用方案）
-        if (!result.isValid()) {
-            val allNumbers = Regex("\\d+").findAll(allText)
+        
+        // 3. 如果从标签没匹配够，尝试纯数字推断
+        if (foundStats < 3) {
+            val allNums = Regex("\\d+")
+                .findAll(allText)
                 .map { it.value.toIntOrNull() ?: 0 }
                 .filter { it in 50..2100 }
+                .take(5)
                 .toList()
             
-            if (allNumbers.size >= 5) {
-                result.speed = allNumbers.getOrElse(0) { 0 }
-                result.stamina = allNumbers.getOrElse(1) { 0 }
-                result.power = allNumbers.getOrElse(2) { 0 }
-                result.guts = allNumbers.getOrElse(3) { 0 }
-                result.wit = allNumbers.getOrElse(4) { 0 }
+            if (allNums.size >= 5) {
+                speed = allNums[0]; stamina = allNums[1]; power = allNums[2]
+                guts = allNums[3]; wit = allNums[4]
             }
         }
-
-        return result
+        
+        return OcrResult(
+            turn = turn,
+            speed = speed, stamina = stamina, power = power, guts = guts, wit = wit,
+            vital = vital, skillPt = skillPt,
+            rawConfidence = foundStats / 5f
+        )
     }
 
-    data class GameStats(
-        var speed: Int = 0,
-        var stamina: Int = 0,
-        var power: Int = 0,
-        var guts: Int = 0,
-        var wit: Int = 0,
-        var vital: Int = 0,
-        var motivation: Int = 2,
-        var turn: Int = 0,
-        var skillPt: Int = 0,
-        var isFat: Boolean = false
-    ) {
-        fun isValid(): Boolean {
-            return speed > 0 && stamina > 0 && power > 0 && guts > 0 && wit > 0
+    private fun sendOcrResult(result: OcrResult) {
+        val intent = Intent("com.umaai.OCR_RESULT").apply {
+            putExtra("turn", result.turn)
+            putExtra("speed", result.speed)
+            putExtra("stamina", result.stamina)
+            putExtra("power", result.power)
+            putExtra("guts", result.guts)
+            putExtra("wit", result.wit)
+            putExtra("vital", result.vital)
+            putExtra("skillPt", result.skillPt)
+            putExtra("motivation", result.motivation)
+            putExtra("isFat", result.isFat)
+            putExtra("confidence", result.rawConfidence)
         }
+        sendBroadcast(intent)
+    }
+
+    private fun sendOcrError(message: String) {
+        val intent = Intent("com.umaai.OCR_ERROR").apply {
+            putExtra("error", message)
+        }
+        sendBroadcast(intent)
+    }
+
+    /**
+     * 清理所有截图缓存（识别完立即调用）
+     */
+    private fun clearScreenshotCache() {
+        try {
+            val dir = File(cacheDir, SCREENSHOT_DIR)
+            if (dir.exists()) {
+                dir.listFiles()?.forEach { it.delete() }
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun cleanup() {
+        virtualDisplay?.release()
+        imageReader?.close()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         try { unregisterReceiver(captureReceiver) } catch (_: Exception) {}
-        scope.cancel()
-        virtualDisplay?.release()
-        imageReader?.close()
+        clearScreenshotCache()
+        cleanup()
         mediaProjection?.stop()
         recognizer.close()
     }
 
-    // ========== 通知 ==========
-
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "uma_capture", "截图OCR",
-                NotificationManager.IMPORTANCE_MIN
-            ).apply { setShowBadge(false) }
+            val channel = NotificationChannel("uma_capture", "截图OCR",
+                NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(false) }
             (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .createNotificationChannel(channel)
         }
@@ -302,8 +418,8 @@ class ScreenshotService : Service() {
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, "uma_capture")
-            .setContentTitle("赛马娘AI - 截图服务")
-            .setContentText("自动截图OCR识别中")
+            .setContentTitle("UmaAI - 截图OCR就绪")
+            .setContentText("点击悬浮窗的相机按钮截图识别")
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setContentIntent(pi).setOngoing(true).build()
     }

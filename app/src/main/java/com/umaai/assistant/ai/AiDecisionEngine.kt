@@ -360,7 +360,7 @@ class AiDecisionEngine {
     }
 
     private fun isRaceTurn(turn: Int): Boolean {
-        return RACE_TURNS.any { Math.abs(it - turn) <= 2 }
+        return RACE_TURNS.any { kotlin.math.abs(it - turn) <= 2 }
     }
 
     // ========== 建议文本 ==========

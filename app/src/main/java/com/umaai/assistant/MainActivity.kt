@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
+import com.umaai.assistant.service.FloatingService
 import com.umaai.assistant.service.FloatingWindowService
 import com.umaai.assistant.service.ScreenshotService
 
@@ -55,13 +56,14 @@ class MainActivity : AppCompatActivity() {
             requestAccessibilityService()
         }
 
-        // 启动悬浮窗
+        // 启动悬浮窗（URA仪表盘）
         findViewById<MaterialButton>(R.id.btnStart).setOnClickListener {
             startFloatingWindow()
         }
 
         // 停止
         findViewById<MaterialButton>(R.id.btnStop).setOnClickListener {
+            stopService(Intent(this, FloatingService::class.java))
             stopService(Intent(this, FloatingWindowService::class.java))
             stopService(Intent(this, ScreenshotService::class.java))
             Toast.makeText(this, "已停止", Toast.LENGTH_SHORT).show()
@@ -137,8 +139,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "请先开启悬浮窗权限", Toast.LENGTH_SHORT).show()
             return
         }
-        startService(Intent(this, FloatingWindowService::class.java))
-        Toast.makeText(this, "AI助手已启动，打开赛马娘游戏即可自动检测", Toast.LENGTH_LONG).show()
+        // 启动URA仪表盘悬浮窗（含手动输入+截图OCR功能）
+        startService(Intent(this, FloatingService::class.java))
+        Toast.makeText(this, "AI仪表盘已启动", Toast.LENGTH_LONG).show()
         moveTaskToBack(true)
     }
 

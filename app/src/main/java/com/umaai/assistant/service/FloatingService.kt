@@ -92,6 +92,28 @@ class FloatingService : Service() {
                     gameState.isFat = intent.getBooleanExtra("isFat", false)
                     updateUI()
                 }
+                ACTION_OCR_RESULT -> {
+                    // OCR结果：更新五维+回合数（参考PC工具的显示格式）
+                    val turn = intent.getIntExtra("turn", 0)
+                    if (turn > 0) gameState.turn = turn
+                    gameState.speed = intent.getIntExtra("speed", gameState.speed)
+                    gameState.stamina = intent.getIntExtra("stamina", gameState.stamina)
+                    gameState.power = intent.getIntExtra("power", gameState.power)
+                    gameState.guts = intent.getIntExtra("guts", gameState.guts)
+                    gameState.wit = intent.getIntExtra("wit", gameState.wit)
+                    gameState.vital = intent.getIntExtra("vital", gameState.vital)
+                    gameState.skillPt = intent.getIntExtra("skillPt", gameState.skillPt)
+                    
+                    val confidence = intent.getFloatExtra("confidence", 0f)
+                    tvStatus?.text = "OCR识别完成 (置信度:${(confidence * 100).toInt()}%) 截图已删除"
+                    tvStatus?.setTextColor(0xFF44FF88.toInt())
+                    updateUI()
+                }
+                "com.umaai.OCR_ERROR" -> {
+                    val error = intent.getStringExtra("error") ?: "OCR失败"
+                    tvStatus?.text = error
+                    tvStatus?.setTextColor(0xFFFF4444.toInt())
+                }
                 ACTION_TOGGLE -> {
                     if (isMinimized) expand() else minimize()
                 }
@@ -110,7 +132,11 @@ class FloatingService : Service() {
             addAction(ACTION_OCR_RESULT)
             addAction(ACTION_TOGGLE)
         }
-        registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(updateReceiver, filter)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -246,7 +272,7 @@ class FloatingService : Service() {
             }
             "race" -> {
                 gameState.skillPt += 35
-                gameState.isFat = false
+                // 比赛不能消除吃胖，只有保健室可以
             }
         }
         updateUI()

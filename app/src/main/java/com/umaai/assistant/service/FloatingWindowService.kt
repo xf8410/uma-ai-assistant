@@ -99,12 +99,18 @@ class FloatingWindowService : Service() {
         createNotificationChannel()
         startForeground(1, createNotification())
 
-        registerReceiver(adviceReceiver, IntentFilter("com.umaai.AI_ADVICE"),
-            Context.RECEIVER_NOT_EXPORTED)
-        registerReceiver(uiReceiver, IntentFilter().apply {
+        val adviceFilter = IntentFilter("com.umaai.AI_ADVICE")
+        val uiFilter = IntentFilter().apply {
             addAction("com.umaai.SHOW_DETECTED")
             addAction("com.umaai.HIDE_ADVICE")
-        }, Context.RECEIVER_NOT_EXPORTED)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(adviceReceiver, adviceFilter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(uiReceiver, uiFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(adviceReceiver, adviceFilter)
+            registerReceiver(uiReceiver, uiFilter)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
