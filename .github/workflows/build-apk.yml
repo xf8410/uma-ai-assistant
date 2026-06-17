@@ -32,26 +32,35 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp/
           /tmp/gradle-8.2/bin/gradle --version
 
-      - name: Clean and Build Debug APK
+      - name: Build Debug APK
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           export GRADLE_USER_HOME=/tmp/gradle-home
           mkdir -p $GRADLE_USER_HOME
-          /tmp/gradle-8.2/bin/gradle clean assembleDebug --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME
+          /tmp/gradle-8.2/bin/gradle clean assembleDebug --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME 2>&1 | tee /tmp/build.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "=== Gradle Exit Code: $EXIT_CODE ==="
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "=== BUILD FAILED - LAST 80 LINES ==="
+            tail -n 80 /tmp/build.log
+            echo "=== KOTLIN COMPILER ERRORS ==="
+            grep -i "error:\|e:\|w:\|* what went wrong\|* try\|failed" /tmp/build.log | head -30
+          fi
+          exit $EXIT_CODE
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
       - name: Find APK
+        if: always()
         run: |
           echo "=== All APK files ==="
-          find . -name "*.apk" -type f 2>/dev/null
-          echo "=== Outputs structure ==="
-          find app/build/outputs -type f 2>/dev/null | head -30
-          echo "=== Check debug dir ==="
-          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "NO debug APK dir"
+          find . -name "*.apk" -type f 2>/dev/null | head -20
+          echo "=== Build outputs ==="
+          find app/build/outputs -type f 2>/dev/null | head -20
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: uma-ai-assistant-debug
