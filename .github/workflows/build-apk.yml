@@ -38,32 +38,32 @@ jobs:
           export GRADLE_USER_HOME=/tmp/gradle-home
           mkdir -p $GRADLE_USER_HOME
           /tmp/gradle-8.2/bin/gradle clean assembleDebug --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME 2>&1 | tee /tmp/build.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          echo "=== Gradle Exit Code: $EXIT_CODE ==="
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "=== BUILD FAILED - LAST 80 LINES ==="
-            tail -n 80 /tmp/build.log
-            echo "=== KOTLIN COMPILER ERRORS ==="
-            grep -i "error:\|e:\|w:\|* what went wrong\|* try\|failed" /tmp/build.log | head -30
-          fi
-          exit $EXIT_CODE
+          echo "EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
-      - name: Find APK
+      - name: Extract errors
         if: always()
         run: |
-          echo "=== All APK files ==="
-          find . -name "*.apk" -type f 2>/dev/null | head -20
-          echo "=== Build outputs ==="
-          find app/build/outputs -type f 2>/dev/null | head -20
+          echo "=== Gradle exit: ${{ env.EXIT_CODE }} ===" | tee /tmp/build_errors.txt
+          echo "=== LAST 100 LINES ===" | tee -a /tmp/build_errors.txt
+          tail -n 100 /tmp/build.log | tee -a /tmp/build_errors.txt
+          echo "=== COMPILER ERRORS ===" | tee -a /tmp/build_errors.txt
+          grep -n "error:\|e: \|* What went wrong\|FAIL\|FAILED\|cannot find" /tmp/build.log | tee -a /tmp/build_errors.txt || true
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: /tmp/build_errors.txt
+          retention-days: 5
 
       - name: Upload APK
-        if: success()
+        if: env.EXIT_CODE == '0'
         uses: actions/upload-artifact@v4
         with:
           name: uma-ai-assistant-debug
           path: app/build/outputs/apk/**/*.apk
           retention-days: 30
-          if-no-files-found: warn
