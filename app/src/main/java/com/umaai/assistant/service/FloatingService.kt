@@ -223,15 +223,15 @@ class FloatingService : Service() {
     }
 
     private fun setupAdjustButtons() {
-        val adjustMap = mapOf(
-            R.id.btnSpeedMinus to "speed" to -1, R.id.btnSpeedPlus to "speed" to 1,
-            R.id.btnStaminaMinus to "stamina" to -1, R.id.btnStaminaPlus to "stamina" to 1,
-            R.id.btnPowerMinus to "power" to -1, R.id.btnPowerPlus to "power" to 1,
-            R.id.btnGutsMinus to "guts" to -1, R.id.btnGutsPlus to "guts" to 1,
-            R.id.btnWitMinus to "wit" to -1, R.id.btnWitPlus to "wit" to 1,
+        // 显式Pair避免to运算符嵌套歧义
+        val adjustList = listOf(
+            Triple(R.id.btnSpeedMinus, "speed", -1), Triple(R.id.btnSpeedPlus, "speed", 1),
+            Triple(R.id.btnStaminaMinus, "stamina", -1), Triple(R.id.btnStaminaPlus, "stamina", 1),
+            Triple(R.id.btnPowerMinus, "power", -1), Triple(R.id.btnPowerPlus, "power", 1),
+            Triple(R.id.btnGutsMinus, "guts", -1), Triple(R.id.btnGutsPlus, "guts", 1),
+            Triple(R.id.btnWitMinus, "wit", -1), Triple(R.id.btnWitPlus, "wit", 1),
         )
-        for ((btnId, pair) in adjustMap) {
-            val (stat, delta) = pair
+        for ((btnId, stat, delta) in adjustList) {
             floatingView?.findViewById<Button>(btnId)?.setOnClickListener {
                 when (stat) {
                     "speed" -> gameState.speed = (gameState.speed + delta).coerceAtLeast(0)
