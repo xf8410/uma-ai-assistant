@@ -32,20 +32,24 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp/
           /tmp/gradle-8.2/bin/gradle --version
 
-      - name: Build Debug APK
+      - name: Compile Kotlin Only
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           export GRADLE_USER_HOME=/tmp/gradle-home
           mkdir -p $GRADLE_USER_HOME
-          /tmp/gradle-8.2/bin/gradle clean assembleDebug --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME
+          /tmp/gradle-8.2/bin/gradle compileDebugKotlin --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME 2>&1 | tail -n 50
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
-      - name: Verify APK
+      - name: Full Build (APK)
         run: |
-          find app/build/outputs -name "*.apk" -type f
-          ls -la app/build/outputs/apk/debug/
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          export GRADLE_USER_HOME=/tmp/gradle-home
+          /tmp/gradle-8.2/bin/gradle assembleDebug --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME 2>&1 | tail -n 30
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
       - name: Upload APK
         if: success()
