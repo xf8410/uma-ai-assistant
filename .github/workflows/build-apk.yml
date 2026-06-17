@@ -17,37 +17,38 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build APK
-        run: ./gradlew assembleDebug
+        run: gradle assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: uma-ai-assistant-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload to release
-        if: github.ref == 'refs/heads/main'
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: app/build/outputs/apk/debug/app-debug.apk
-          tag_name: latest
-          name: UmaAI Assistant APK
+          tag_name: v1.0.${{ github.run_number }}
+          name: UmaAI Assistant v1.0.${{ github.run_number }}
           body: |
-            赛马娘AI助手APK
-            - URA风格训练决策仪表盘
-            - 截图OCR识别
-            - 悬浮窗显示
+            ## 赛马娘AI助手APK
             
-            安装方法：
-            1. 下载app-debug.apk
-            2. 允许"未知来源"安装
-            3. 授予悬浮窗+屏幕录制权限
+            ### 功能
+            - URA风格训练决策仪表盘（悬浮窗）
+            - 截图OCR识别五维数值
+            - AI实时决策建议
+            - 自动记录训练数据
+            
+            ### 安装方法
+            1. 下载 `app-debug.apk`
+            2. 设置 → 允许未知来源安装
+            3. 打开APP → 授予悬浮窗权限
+            4. 授予屏幕录制权限（OCR用）
+            5. 打开赛马娘游戏
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
