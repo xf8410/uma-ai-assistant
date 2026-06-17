@@ -37,33 +37,40 @@ jobs:
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           export GRADLE_USER_HOME=/tmp/gradle-home
           mkdir -p $GRADLE_USER_HOME
+          set -o pipefail
           /tmp/gradle-8.2/bin/gradle clean assembleDebug --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME 2>&1 | tee /tmp/build.log
-          echo "EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
       - name: Extract errors
-        if: always()
+        if: failure()
         run: |
-          echo "=== Gradle exit: ${{ env.EXIT_CODE }} ===" | tee /tmp/build_errors.txt
-          echo "=== LAST 100 LINES ===" | tee -a /tmp/build_errors.txt
+          echo "=== LAST 100 LINES ===" | tee /tmp/build_errors.txt
           tail -n 100 /tmp/build.log | tee -a /tmp/build_errors.txt
           echo "=== COMPILER ERRORS ===" | tee -a /tmp/build_errors.txt
-          grep -n "error:\|e: \|* What went wrong\|FAIL\|FAILED\|cannot find" /tmp/build.log | tee -a /tmp/build_errors.txt || true
+          grep -n "error:\|e: \|* What went wrong\|FAIL\|FAILED" /tmp/build.log | tee -a /tmp/build_errors.txt || true
 
-      - name: Upload build log
-        if: always()
+      - name: Upload error log
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: build-log
           path: /tmp/build_errors.txt
           retention-days: 5
 
+      - name: Verify APK exists
+        run: |
+          echo "=== All APK files ==="
+          find . -name "*.apk" -type f 2>/dev/null | head -20
+          echo "=== Outputs structure ==="
+          find app/build/outputs -type f 2>/dev/null | head -20
+          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "No debug APK dir"
+
       - name: Upload APK
-        if: env.EXIT_CODE == '0'
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: uma-ai-assistant-debug
-          path: app/build/outputs/apk/**/*.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
