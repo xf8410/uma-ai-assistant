@@ -17,42 +17,28 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install Android SDK
-        run: |
-          # Install command line tools
-          sudo apt-get update
-          sudo apt-get install -y wget unzip
-          mkdir -p /usr/local/android-sdk/cmdline-tools
-          cd /usr/local/android-sdk/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q commandlinetools-linux-11076708_latest.zip
-          mv cmdline-tools latest
-          export ANDROID_HOME=/usr/local/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          yes | sdkmanager --licenses || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
-          echo "ANDROID_HOME=/usr/local/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$PATH:/usr/local/android-sdk/cmdline-tools/latest/bin:/usr/local/android-sdk/platform-tools" >> $GITHUB_ENV
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 11076708
+          packages: 'platforms;android-34 build-tools;34.0.0 platform-tools'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          cache-disabled: true
+          gradle-version: '8.2'
 
-      - name: Build APK (with debug)
-        run: |
-          export ANDROID_HOME=/usr/local/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
-          gradle assembleDebug --stacktrace --info 2>&1 || true
-        continue-on-error: true
+      - name: Build APK
+        run: gradle assembleDebug
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
-      - name: Check if APK exists
-        run: |
-          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "APK not found"
+      - name: List outputs
+        run: ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "No output dir"
 
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: uma-ai-assistant-apk
+          name: uma-ai-assistant
           path: app/build/outputs/apk/debug/app-debug.apk
