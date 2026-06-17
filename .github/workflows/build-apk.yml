@@ -39,7 +39,7 @@ jobs:
           export GRADLE_USER_HOME=/tmp/gradle-home
           mkdir -p $GRADLE_USER_HOME
           set -o pipefail
-          /tmp/gradle-8.2/bin/gradle clean assembleDebug --stacktrace --no-daemon --gradle-user-home=$GRADLE_USER_HOME > /tmp/build.log 2>&1
+          /tmp/gradle-8.2/bin/gradle clean assembleDebug --info --no-daemon --gradle-user-home=$GRADLE_USER_HOME > /tmp/build.log 2>&1
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
