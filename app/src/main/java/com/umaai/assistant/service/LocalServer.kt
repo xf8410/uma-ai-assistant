@@ -17,7 +17,7 @@ class LocalServer(private val context: Context) : NanoHTTPD(PORT) {
 
     companion object {
         private const val TAG = "LocalServer"
-        private const val PORT = 4693   // 固定端口，与 Frida 脚本一致
+        private const val PORT = 4693
     }
 
     override fun serve(session: IHTTPSession): Response {
@@ -32,14 +32,16 @@ class LocalServer(private val context: Context) : NanoHTTPD(PORT) {
                 intent.putExtra("data", body)
                 context.sendBroadcast(intent)
 
-                // 返回成功响应
-                newFixedLengthResponse(Status.OK, "application/json", """{"status":"ok"}""")
+                // ✅ 返回成功响应（加上 NanoHTTPD.）
+                NanoHTTPD.newFixedLengthResponse(Status.OK, "application/json", """{"status":"ok"}""")
             } else {
-                newFixedLengthResponse(Status.BAD_REQUEST, "text/plain", "Bad Request")
+                // ✅ 加上 NanoHTTPD.
+                NanoHTTPD.newFixedLengthResponse(Status.BAD_REQUEST, "text/plain", "Bad Request")
             }
         } catch (e: Exception) {
             Log.e(TAG, "处理失败: ${e.message}")
-            newFixedLengthResponse(Status.INTERNAL_ERROR, "text/plain", "Server Error")
+            // ✅ 加上 NanoHTTPD.
+            NanoHTTPD.newFixedLengthResponse(Status.INTERNAL_ERROR, "text/plain", "Server Error")
         }
     }
 
